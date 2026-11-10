@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diagrama de Cuerpo Libre - Péndulo Simple</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-color: #f8fafc;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            max-width: 900px;
+            width: 100%;
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 1.5rem;
+            margin-top: 0;
+            color: #e2e8f0;
+        }
+
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+            background-color: rgba(15, 23, 42, 0.6);
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        label {
+            font-size: 0.95rem;
+            cursor: pointer;
+        }
+
+        input[type="range"] {
+            cursor: pointer;
+        }
+
+        .canvas-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #0b1329;
+            border-radius: 8px;
+            border: 1px solid #334155;
+            overflow: hidden;
+            padding: 10px;
+        }
+
+        .legend {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+            margin-top: 20px;
+            font-size: 0.9rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.03);
+            padding: 8px 12px;
+            border-radius: 6px;
+        }
+
+        .color-box {
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Diagrama de Cuerpo Libre (DCL) - Péndulo Simple</h1>
+    
+    <div class="controls">
+        <div class="control-group">
+            <label for="angle">Ángulo (&theta;): <span id="angle-val">0</span>°</label>
+            <input type="range" id="angle" min="0" max="60" value="0">
+        </div>
+        <div class="control-group">
+            <input type="checkbox" id="show-components" checked>
+            <label for="show-components">Mostrar Componentes del Peso</label>
+        </div>
+    </div>
+
+    <div class="canvas-container">
+        <svg id="dcl-svg" width="600" height="450" viewBox="-300 -50 600 450">
+            <defs>
+                <marker id="arrow-tension" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                    <path d="M 0 0 L 10 5 L 0 10 z" fill="#ef4444" />
+                </marker>
+                <marker id="arrow-weight" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                    <path d="M 0 0 L 10 5 L 0 10 z" fill="#3b82f6" />
+                </marker>
+                <marker id="arrow-restoring" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                    <path d="M 0 0 L 10 5 L 0 10 z" fill="#22c55e" />
+                </marker>
+                <marker id="arrow-radial" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                    <path d="M 0 0 L 10 5 L 0 10 z" fill="#a855f7" />
+                </marker>
+            </defs>
+
+            <!-- Techo -->
+            <line x1="-60" y1="0" x2="60" y2="0" stroke="#94a3b8" stroke-width="4" />
+            <circle cx="0" cy="0" r="4" fill="#f8fafc" />
+
+            <!-- Vertical de referencia (Eje Y) -->
+            <line x1="0" y1="0" x2="0" y2="380" stroke="#475569" stroke-width="1.5" stroke-dasharray="6,6" />
+            
+            <!-- Arco del Ángulo -->
+            <path id="angle-arc" fill="none" stroke="#f59e0b" stroke-width="2" />
+            <text id="angle-text" fill="#f59e0b" font-size="16" font-weight="bold">&theta;</text>
+
+            <!-- Cuerda -->
+            <line id="string" x1="0" y1="0" x2="0" y2="0" stroke="#cbd5e1" stroke-width="2" />
+
+            <!-- Líneas guía para componentes -->
+            <line id="guide-1" stroke="#475569" stroke-width="1" stroke-dasharray="4,4" />
+            <line id="guide-2" stroke="#475569" stroke-width="1" stroke-dasharray="4,4" />
+
+            <!-- VECTORES -->
+            <line id="vec-tension" stroke="#ef4444" stroke-width="3.5" marker-end="url(#arrow-tension)" />
+            <line id="vec-weight" stroke="#3b82f6" stroke-width="3.5" marker-end="url(#arrow-weight)" />
+            <line id="vec-radial" stroke="#a855f7" stroke-width="2.5" stroke-dasharray="5,3" marker-end="url(#arrow-radial)" />
+            <line id="vec-restoring" stroke="#22c55e" stroke-width="3" marker-end="url(#arrow-restoring)" />
+
+            <!-- Masa -->
+            <circle id="bob" cx="0" cy="0" r="18" fill="#f59e0b" stroke="#b45309" stroke-width="2" />
+            <text id="bob-label" fill="#000" font-size="12" font-weight="bold" text-anchor="middle" dominant-baseline="central">m</text>
+
+            <!-- ETIQUETAS -->
+            <text id="label-tension" fill="#ef4444" font-size="15" font-weight="bold">T</text>
+            <text id="label-weight" fill="#3b82f6" font-size="15" font-weight="bold">Fg = m&middot;g</text>
+            <text id="label-restoring" fill="#22c55e" font-size="14" font-weight="bold">m&middot;g&middot;sin(&theta;)</text>
+            <text id="label-radial" fill="#a855f7" font-size="14" font-weight="bold">m&middot;g&middot;cos(&theta;)</text>
+        </svg>
+    </div>
+
+    <div class="legend">
+        <div class="legend-item">
+            <div class="color-box" style="background-color: #ef4444;"></div>
+            <span><strong>Tensión (T):</strong> Apunta al pivote</span>
+        </div>
+        <div class="legend-item">
+            <div class="color-box" style="background-color: #3b82f6;"></div>
+            <span><strong>Peso (Fg):</strong> Vertical hacia abajo</span>
+        </div>
+        <div class="legend-item">
+            <div class="color-box" style="background-color: #22c55e;"></div>
+            <span><strong>Fuerza Restauradora:</strong> Tangencial (0 en &theta;=0)</span>
+        </div>
+        <div class="legend-item">
+            <div class="color-box" style="background-color: #a855f7;"></div>
+            <span><strong>Comp. Radial:</strong> Se opone a la tensión</span>
+        </div>
+    </div>
+</div>
+
+<script>
+    const L = 250;
+    const gMag = 120;
+
+    const angleInput = document.getElementById('angle');
+    const angleVal = document.getElementById('angle-val');
+    const showComponentsInput = document.getElementById('show-components');
+
+    function updateDCL() {
+        const deg = parseFloat(angleInput.value);
+        angleVal.textContent = deg;
+        const rad = deg * (Math.PI / 180);
+
+        const bx = L * Math.sin(rad);
+        const by = L * Math.cos(rad);
+
+        // Actualizar posición de la cuerda y la masa
+        document.getElementById('string').setAttribute('x2', bx);
+        document.getElementById('string').setAttribute('y2', by);
+
+        document.getElementById('bob').setAttribute('cx', bx);
+        document.getElementById('bob').setAttribute('cy', by);
+        document.getElementById('bob-label').setAttribute('x', bx);
+        document.getElementById('bob-label').setAttribute('y', by);
+
+        // Control del Arco del Ángulo theta
+        const angleArc = document.getElementById('angle-arc');
+        const angleText = document.getElementById('angle-text');
+
+        if (deg <= 0) {
+            angleArc.setAttribute('d', 'M 0 0');
+            angleText.setAttribute('visibility', 'hidden');
+        } else {
+            angleText.setAttribute('visibility', 'visible');
+            const arcR = 50;
+            const ax = arcR * Math.sin(rad);
+            const ay = arcR * Math.cos(rad);
+            angleArc.setAttribute('d', `M 0 ${arcR} A ${arcR} ${arcR} 0 0 0 ${ax} ${ay}`);
+            angleText.setAttribute('x', arcR * Math.sin(rad/2) + 8);
+            angleText.setAttribute('y', arcR * Math.cos(rad/2));
+        }
+
+        // Vector Peso Fg (siempre vertical hacia abajo)
+        const wx = bx;
+        const wy = by + gMag;
+        document.getElementById('vec-weight').setAttribute('x1', bx);
+        document.getElementById('vec-weight').setAttribute('y1', by);
+        document.getElementById('vec-weight').setAttribute('x2', wx);
+        document.getElementById('vec-weight').setAttribute('y2', wy);
+        document.getElementById('label-weight').setAttribute('x', wx + 12);
+        document.getElementById('label-weight').setAttribute('y', wy - 5);
+
+        // Vector Tensión T (hacia el origen)
+        const tMag = gMag * Math.cos(rad);
+        const tx = bx - tMag * Math.sin(rad);
+        const ty = by - tMag * Math.cos(rad);
+        document.getElementById('vec-tension').setAttribute('x1', bx);
+        document.getElementById('vec-tension').setAttribute('y1', by);
+        document.getElementById('vec-tension').setAttribute('x2', tx);
+        document.getElementById('vec-tension').setAttribute('y2', ty);
+        document.getElementById('label-tension').setAttribute('x', tx - 25);
+        document.getElementById('label-tension').setAttribute('y', ty + (deg === 0 ? 25 : 0));
+
+        // Componentes del peso
+        const showComp = showComponentsInput.checked;
+        const compVisibility = (showComp && deg > 0) ? 'visible' : 'hidden';
+
+        const rx = bx + tMag * Math.sin(rad);
+        const ry = by + tMag * Math.cos(rad);
+        const vecRadial = document.getElementById('vec-radial');
+        const labelRadial = document.getElementById('label-radial');
+
+        const ftMag = gMag * Math.sin(rad);
+        const fx = bx - ftMag * Math.cos(rad);
+        const fy = by + ftMag * Math.sin(rad);
+        const vecRest = document.getElementById('vec-restoring');
+        const labelRest = document.getElementById('label-restoring');
+
+        const g1 = document.getElementById('guide-1');
+        const g2 = document.getElementById('guide-2');
+
+        vecRadial.setAttribute('visibility', compVisibility);
+        labelRadial.setAttribute('visibility', compVisibility);
+        vecRest.setAttribute('visibility', compVisibility);
+        labelRest.setAttribute('visibility', compVisibility);
+        g1.setAttribute('visibility', compVisibility);
+        g2.setAttribute('visibility', compVisibility);
+
+        if (showComp && deg > 0) {
+            vecRadial.setAttribute('x1', bx);
+            vecRadial.setAttribute('y1', by);
+            vecRadial.setAttribute('x2', rx);
+            vecRadial.setAttribute('y2', ry);
+            labelRadial.setAttribute('x', rx + 10);
+            labelRadial.setAttribute('y', ry + 10);
+
+            vecRest.setAttribute('x1', bx);
+            vecRest.setAttribute('y1', by);
+            vecRest.setAttribute('x2', fx);
+            vecRest.setAttribute('y2', fy);
+            labelRest.setAttribute('x', fx - 85);
+            labelRest.setAttribute('y', fy + 15);
+
+            g1.setAttribute('x1', wx);
+            g1.setAttribute('y1', wy);
+            g1.setAttribute('x2', rx);
+            g1.setAttribute('y2', ry);
+
+            g2.setAttribute('x1', wx);
+            g2.setAttribute('y1', wy);
+            g2.setAttribute('x2', fx);
+            g2.setAttribute('y2', fy);
+        }
+    }
+
+    angleInput.addEventListener('input', updateDCL);
+    showComponentsInput.addEventListener('change', updateDCL);
+
+    updateDCL();
+</script>
+
+</body>
+</html>
